@@ -24,7 +24,7 @@ def extract_info(pdf_path):
 
 def main():
     # Extrair informações da guia amarela
-    info = extract_info('D:\Users\eugen\Documents\Gui\ESTUDOS\Python\analise_pdf\\CAM2024084848-240306165204.pdf')
+    info = extract_info("D:\\Users\\eugen\\Documents\\Gui\\ESTUDOS\\Python\\analise_pdf\\src\\CAM2024084848-240306165204.pdf")
 
     # Abrir o site e preencher o campo
     webbrowser.open('https://geocuritiba.ippuc.org.br/mapacadastral/')
