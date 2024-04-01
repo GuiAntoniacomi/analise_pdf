@@ -27,7 +27,7 @@ def extrair_informacoes_pdf(nome_arquivo):
     return area_terreno, area_construida
 
 # Nome do arquivo PDF
-nome_arquivo_pdf = "D:\\Users\\eugen\\Documents\\Gui\\ESTUDOS\\Python\\analise_pdf\\src\\CAM2024084848-240306165204.pdf"
+nome_arquivo_pdf = "C:\\Users\\anton\\OneDrive\\Documents\\GitHub\\analise_pdf\\src\\CAM2024084848-240306165204.pdf"
 
 # Chama a função para extrair as informações
 area_terreno, area_construida = extrair_informacoes_pdf(nome_arquivo_pdf)
