@@ -23,7 +23,7 @@ def extrair_informacoes_pdf(nome_arquivo):
 
 at = float(input('Digite a área do terreno: '))
 # Nome do arquivo PDF
-nome_arquivo_pdf = "src/CAM2024084848-240306165204.PDF"
+nome_arquivo_pdf = "src\\CAM2024084848-240306165204.PDF"
 
 # Chama a função para extrair as informações
 area_terreno, area_construida = extrair_informacoes_pdf(nome_arquivo_pdf)
