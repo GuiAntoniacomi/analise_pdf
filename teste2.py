@@ -29,7 +29,7 @@ def encontrar_opcoes_disponiveis(lista_tabelas):
 warnings.filterwarnings("ignore", category=FutureWarning)
 
 # Lê todas as tabelas do PDF
-lista_tabelas = tabula.read_pdf("src\\novo.PDF", pages="1")
+lista_tabelas = tabula.read_pdf("src\\CAM2024084848-240306165204.PDF", pages="1")
 
 # Restaura as configurações de aviso padrão
 warnings.resetwarnings()
@@ -54,8 +54,8 @@ opcao = int(input("Digite o número da opção desejada: "))
 # Exibe a tabela correspondente
 if 1 <= opcao <= len(lista_tabelas):
     tabela_escolhida = lista_tabelas[opcao - 1]
-    print("\nTabela escolhida:")
-    print(tabela_escolhida)
+    #print("\nTabela escolhida:")
+    #print(tabela_escolhida)
 
 # Criar listas com as informações desejadas, ignorando as linhas 0 e 1
 linhas = tabela_escolhida.values.tolist()[2:]
@@ -83,18 +83,25 @@ while True:
 tipo_habitacao_escolhido = list(habitacao_indices.keys())[opcao_habitacao - 1]
 indice_habitacao_escolhido = habitacao_indices[tipo_habitacao_escolhido]
 
+def converter_para_numero(valor):
+    if pd.notna(valor):
+        if isinstance(valor, str):
+            try:
+                return float(valor.replace(",", "."))
+            except ValueError:
+                return None
+        elif isinstance(valor, (int, float)):
+            return valor
+    return None
+
+# Calcular área máxima construtível para cada tipo de habitação
 # Calcular área máxima construtível para cada tipo de habitação
 for linha in linhas:
     if linha[0] != "USOS PERMITIDOS NÃO HABITACIONAIS":  # Ignorar linha de cabeçalho
         tipo_habitacao = linha[0]  # Extrair tipo de habitação
-        coef_utilizacao = linha[1] if pd.notna(linha[1]) else None  # Coeficiente de aproveitamento
-
-        # Converter o coeficiente para um número de ponto flutuante, se não for NaN
-        if coef_utilizacao is not None and isinstance(coef_utilizacao, str):
-            try:
-                coef_utilizacao = float(coef_utilizacao.replace(",", "."))  # Substituir ',' por '.' se presente
-            except ValueError:
-                coef_utilizacao = None
+        coef_utilizacao = converter_para_numero(linha[1])  # Coeficiente de aproveitamento
+        taxa_ocupacao = converter_para_numero(linha[4])  # Taxa de ocupação permitida
+        altura_permitida = converter_para_numero(linha[2])  # Altura permitida
 
         # Se o coeficiente ainda não estiver disponível, solicitar ao usuário que o insira manualmente
         if coef_utilizacao is None:
@@ -104,15 +111,36 @@ for linha in linhas:
         # Solicitar ao usuário a área do terreno e converter para float
         area_terreno = float(input(f"Digite a área do terreno para {tipo_habitacao} (em metros quadrados): "))
 
+        # Inicializar área máxima construtível
+        area_maxima_construtivel = area_terreno * coef_utilizacao
+
+        # Determinar se há uma edificação construída
+        tem_edificacao_construida = input("Existe alguma edificação construída no terreno? (S/N): ").upper() == "S"
+        if tem_edificacao_construida:
+            manter_edificacao = input("Você pretende manter essa edificação? (S/N): ").upper() == "S"
+            if manter_edificacao:
+                area_construida_atual = float(input("Digite a área construída atualmente (em metros quadrados): "))
+                area_maxima_construtivel -= area_construida_atual
+
         # Calcular área máxima construtível
         if coef_utilizacao is not None:
-            area_maxima_construtivel = area_terreno * coef_utilizacao
+            taxa_ocupacao_final = area_terreno * (taxa_ocupacao / 100) if taxa_ocupacao is not None else None
+            num_pav = area_maxima_construtivel / taxa_ocupacao_final if taxa_ocupacao_final != 0 else None
+
             print(f"Tipo de Habitação: {tipo_habitacao}")
             print(f"Coef. Aproveitamento: {coef_utilizacao}")
+            print(f"Taxa de Ocupação Permitida: {taxa_ocupacao}%")
+            if taxa_ocupacao_final is not None:
+                print(f"Taxa de Ocupação Calculada: {taxa_ocupacao_final:.2f} m²")
+                if altura_permitida is not None:
+                    if num_pav is not None and num_pav <= altura_permitida:
+                        print(f'É possível comprar potencial construtivo e adicionar {altura_permitida - num_pav:.0f} pavimentos.')
+                    else:
+                        print(f'O máximo de pavimentos permitidos por lei é {altura_permitida}.')
+            else:
+                print("Erro ao calcular Taxa de Ocupação - Valor indisponível.")
             print(f"Área Máxima Construtível: {area_maxima_construtivel:.2f} m²")
             print("-" * 30)  # Separador entre tipos de habitação
-            break
         else:
             print(f"Erro ao calcular Área Máxima Construtível para {tipo_habitacao} - Coeficiente de Aproveitamento indisponível.")
             print("-" * 30)  # Separador entre tipos de habitação
-            break
