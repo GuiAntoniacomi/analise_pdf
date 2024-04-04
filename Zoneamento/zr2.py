@@ -1,7 +1,7 @@
 # Com base nas informações extraídas, vamos criar um dicionário para a Zona Residencial 2 - ZR2
 
 # Estrutura de dicionário para ZR2
-zoneamento_zr2 = {
+zr2 = {
     'Habitação Unifamiliar': {
         'COEFICIENTE DE APROVEITAMENTO': 'Básico',
         'ALTURA': 'Básico',
@@ -52,5 +52,3 @@ zoneamento_zr2 = {
     }
 }
 
-# Vamos imprimir a estrutura de dicionário criada para verificar
-zoneamento_zr2

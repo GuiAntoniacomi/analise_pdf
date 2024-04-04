@@ -1,7 +1,7 @@
 # Com base nas informações extraídas, vamos criar um dicionário para a Zona Residencial 3 - ZR3
 
 # Estrutura de dicionário para ZR3
-zoneamento_zr3 = {
+zr3 = {
     'Habitação Unifamiliar': {
         'COEFICIENTE DE APROVEITAMENTO': 'Básico',
         'ALTURA': 'Básico',

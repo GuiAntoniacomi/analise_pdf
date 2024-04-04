@@ -1,7 +1,7 @@
 # Com base nas informações extraídas, vamos criar um dicionário para a Zona Residencial 4 - ZR4
 
 # Estrutura de dicionário para ZR4
-zoneamento_zr4 = {
+zr4 = {
     'Habitações Unifamiliares': {
         'COEFICIENTE DE APROVEITAMENTO': 'Básico',
         'ALTURA': 'Básico',
