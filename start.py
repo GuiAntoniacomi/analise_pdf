@@ -1,54 +1,48 @@
+import re
+from tika import parser
+
+def normalizar_codigo_zoneamento(codigo):
+    # Remove pontos e converte para minúsculas
+    return re.sub(r'\.', '', codigo).lower()
+
+def extrair_zoneamento(nome_arquivo):
+    # Faz a extração do texto do PDF
+    raw_text = parser.from_file(nome_arquivo)['content']
+    
+    # Exemplo de padrões de busca
+    padrao_zoneamento = r'Zoneamento:\s*([A-Z]{2,3}\.\d+)'  # Ajuste conforme necessário
+    # Busca pelas informações no texto extraído
+    match_zoneamento = re.search(padrao_zoneamento, raw_text)
+    
+    zoneamento = None
+    if match_zoneamento:
+        zoneamento = normalizar_codigo_zoneamento(match_zoneamento.group(1))
+        
+    return zoneamento
+
+# Nome do arquivo PDF
+nome_arquivo_pdf = "C:\\Users\\anton\\Downloads\\CAM2024084848-240306165204.PDF"
+
+# Chama a função para extrair o zoneamento
+zoneamento = extrair_zoneamento(nome_arquivo_pdf)
+
+# Agora vamos integrar a extração com o código de busca no banco de dados
 import Zoneamento
 
-def get_usos_disponiveis(dados_zoneamento):
-    usos = []
-    for categoria in dados_zoneamento.values():
-        if isinstance(categoria, dict):
-            usos.extend(categoria.keys())
-    return usos
+def consultar_zoneamento(zoneamento):
+    # Normaliza o código de zoneamento
+    zona_normalizada = normalizar_codigo_zoneamento(zoneamento)
+    
+    try:
+        # Tenta encontrar os dados usando o código de zoneamento normalizado
+        get_data_func = getattr(Zoneamento, f'get_{zona_normalizada}_data')
+        zoneamento_data = get_data_func()
+        # ... (continuação do código existente para trabalhar com os dados encontrados) ...
+    except AttributeError:
+        print("\nZoneamento não encontrado no banco de dados. Tente novamente.")
 
-def main():
-    while True:
-        zoneamento_escolhido = input("\nDigite o nome do zoneamento (ex: 'zr1', 'zr2') ou 'sair' para terminar: ")
-        if zoneamento_escolhido.lower() == 'sair':
-            break
-        
-        try:
-            get_data_func = getattr(Zoneamento, f'get_{zoneamento_escolhido.lower()}_data')
-            zoneamento_data = get_data_func()
-            
-            usos_disponiveis = get_usos_disponiveis(zoneamento_data)
-            if not usos_disponiveis:
-                print("\nNenhum uso disponível encontrado para este zoneamento.")
-                continue
-            
-            print(f"\nUsos disponíveis para {zoneamento_escolhido.upper()}:")
-            for index, uso in enumerate(usos_disponiveis, start=1):
-                print(f"{index}. {uso}")
-            
-            escolha_usuario = input("\nEscolha uma opção (número) para ver detalhes ou 'voltar' para escolher outro zoneamento: ")
-            if escolha_usuario.lower() == 'voltar':
-                continue
-            
-            try:
-                escolha_index = int(escolha_usuario) - 1
-                uso_escolhido = usos_disponiveis[escolha_index]
-            except (ValueError, IndexError):
-                print("\nOpção inválida. Tente novamente.")
-                continue
-
-            for categoria, usos in zoneamento_data.items():
-                if uso_escolhido in usos:
-                    detalhes_do_uso = usos[uso_escolhido]
-                    print(f"\nDetalhes para {uso_escolhido}:")
-                    for chave, valor in detalhes_do_uso.items():
-                        print(f"{chave}: {valor}")
-                    break
-            else:
-                print("\nUso não encontrado.")
-                
-        except AttributeError:
-            print("\nZoneamento não encontrado. Tente novamente.")
-
-if __name__ == "__main__":
-    main()
+# Chama a função de consulta com o zoneamento extraído
+if zoneamento:
+    consultar_zoneamento(zoneamento)
+else:
+    print("Não foi possível identificar o zoneamento no PDF.")
