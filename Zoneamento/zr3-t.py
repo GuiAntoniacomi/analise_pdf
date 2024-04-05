@@ -1,7 +1,7 @@
 # Com base nas informações extraídas, vamos criar um dicionário para a Zona Residencial 3 Transição - ZR3-T
 
 # Estrutura de dicionário para ZR3-T
-zoneamento_zr3t = {
+zr3t = {
     'Habitações Unifamiliares': {
         'COEFICIENTE DE APROVEITAMENTO': 'Básico',
         'ALTURA': 'Básico',  # Adicionalmente, é permitido até 3 habitações unifamiliares por lote.
