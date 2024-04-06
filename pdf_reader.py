@@ -1,77 +1,89 @@
-import warnings
-import tabula
-import pandas as pd
-from tika import parser
 import re
+from PyPDF2 import PdfReader
+from tika import parser
+import Zoneamento  # Este módulo deve conter as funções necessárias como get_zfr_data()
 
-def extrair_informacoes_pdf(nome_arquivo):
-    # Faz a extração do texto do PDF
-    raw_text = parser.from_file(nome_arquivo)['content']
+def normalizar_codigo_zoneamento(codigo_zoneamento):
+    return re.sub(r'\.\d+.*', '', codigo_zoneamento).lower()
 
-    # Exemplo de padrões de busca (ajuste conforme o conteúdo real do PDF)
-    padrao_area_construida = r'Área do\s*Terreno:\s*([\d\.,]+)\s*m²'
-    # Busca pelas informações no texto extraído
-    match_area_construida = re.search(padrao_area_construida, raw_text)
-
-    area_terreno = at
-    area_construida = None
-    
-    if match_area_construida:
-        area_construida = float(match_area_construida.group(1).replace(',', '.'))
-
-    return area_terreno, area_construida
-
-at = float(input('Digite a área do terreno: '))
-# Nome do arquivo PDF
-nome_arquivo_pdf = "src\\CAM2024084848-240306165204.PDF"
-
-# Chama a função para extrair as informações
-area_terreno, area_construida = extrair_informacoes_pdf(nome_arquivo_pdf)
-
-# Exibe os resultados
-print(f"Área do Terreno: {area_terreno} m²")
-print(f"Área Total Construída: {area_construida} m²")
-
-# Suprimir os avisos
-warnings.filterwarnings("ignore", category=FutureWarning)
-
-# Lê todas as tabelas do PDF
-try:
-    lista_tabelas = tabula.read_pdf(nome_arquivo_pdf, pages="all")
-except Exception as e:
-    print("Erro ao ler as tabelas do PDF:", e)
-    lista_tabelas = []
-
-# Restaura as configurações de aviso padrão
-warnings.resetwarnings()
-
-# Pergunta ao usuário qual tabela ele deseja consultar
-print("Escolha uma das opções:")
-print("1. USOS PERMITIDOS HABITACIONAIS")
-print("2. USOS PERMITIDOS NÃO HABITACIONAIS")
-print("3. USOS PERMISSÍVEIS NÃO HABITACIONAIS")
-
-# Solicitar ao usuário que digite o número da opção desejada
-opcao = input("Digite o número da opção desejada: ")
-
-# Verifica se o input é um número inteiro válido
-if opcao.isdigit():
-    opcao = int(opcao)
-
-    # Exibe a tabela correspondente
-    if 1 <= opcao <= len(lista_tabelas):
-        tabela_escolhida = lista_tabelas[opcao - 1]
-        print("\nTabela escolhida:")
-        print(tabela_escolhida)
-
-        # Criar listas com as informações desejadas, ignorando as linhas 0 e 1
-        linhas = tabela_escolhida.values.tolist()[2:]
-
-        # Imprimir as listas
-        print("\nListas criadas:")
-        for linha in linhas:
-            print(linha)
+def extrair_dados_zoneamento(pdf_path, page_number):
+    raw_text = parser.from_file(pdf_path)['content']
+    padrao_zoneamento = r'Zoneamento:\s*([A-Z]{2,3}\.\d+)'
+    match_zoneamento = re.search(padrao_zoneamento, raw_text)
+    if match_zoneamento:
+        return {'Zoneamento': match_zoneamento.group(1)}
     else:
-        print("Opção inválida. Por favor, escolha uma opção válida (1, 2 ou 3).")
-else:
-    print("Por favor, insira um número inteiro válido.")
+        return {'Zoneamento': None}
+
+def buscar_dados_zoneamento(codigo_zoneamento):
+    codigo_zoneamento = normalizar_codigo_zoneamento(codigo_zoneamento)
+    nome_funcao = f'get_{codigo_zoneamento}_data'
+    if hasattr(Zoneamento, nome_funcao):
+        get_data_func = getattr(Zoneamento, nome_funcao)
+        return get_data_func()
+    else:
+        return None
+
+def exibir_categorias_e_obter_escolha(dados_zoneamento):
+    opcoes = list(dados_zoneamento.keys())
+    print("\nCategorias disponíveis:")
+    for i, opcao in enumerate(opcoes, start=1):
+        print(f"{i}. {opcao}")
+    escolha = input("Escolha uma categoria ou digite 'sair' para terminar: ").strip().lower()
+    return escolha, opcoes
+
+def exibir_usos_e_obter_escolha(categoria, dados_zoneamento):
+    if categoria in dados_zoneamento:
+        usos = list(dados_zoneamento[categoria].keys())
+        print(f"\nUsos disponíveis em {categoria}:")
+        for i, uso in enumerate(usos, start=1):
+            print(f"{i}. {uso}")
+        escolha_uso = input("Escolha um uso para ver detalhes ou digite 'voltar' para escolher outra categoria: ").strip().lower()
+        return escolha_uso, usos
+    else:
+        print("Categoria não encontrada.")
+        return None, None
+
+def exibir_detalhes_uso(categoria, uso_escolhido, dados_zoneamento):
+    detalhes = dados_zoneamento[categoria].get(uso_escolhido, {})
+    print(f"\nDetalhes para {uso_escolhido} em {categoria}:")
+    for chave, valor in detalhes.items():
+        if isinstance(valor, list):
+            for item in valor:
+                print(f"  - {item}")
+        else:
+            print(f"  {chave}: {valor}")
+
+def main():
+    pdf_path = "src\\CAM2024084848-240306165204.PDF"
+    pagina_desejada = 1
+    dados_extracao = extrair_dados_zoneamento(pdf_path, pagina_desejada)
+    codigo_zoneamento_bruto = dados_extracao.get('Zoneamento')
+
+    if codigo_zoneamento_bruto:
+        codigo_zoneamento = normalizar_codigo_zoneamento(codigo_zoneamento_bruto)
+        dados_zoneamento = buscar_dados_zoneamento(codigo_zoneamento)
+        if dados_zoneamento:
+            while True:
+                escolha_categoria, categorias = exibir_categorias_e_obter_escolha(dados_zoneamento)
+                if escolha_categoria.lower() == 'sair':
+                    break
+                elif escolha_categoria.isdigit() and 0 < int(escolha_categoria) <= len(categorias):
+                    categoria_selecionada = categorias[int(escolha_categoria) - 1]
+                    escolha_uso, usos = exibir_usos_e_obter_escolha(categoria_selecionada, dados_zoneamento)
+                    if escolha_uso == 'voltar':
+                        continue
+                    elif escolha_uso.isdigit() and 0 < int(escolha_uso) <= len(usos):
+                        uso_selecionado = usos[int(escolha_uso) - 1]
+                        exibir_detalhes_uso(categoria_selecionada, uso_selecionado, dados_zoneamento)
+                    else:
+                        print("Opção inválida.")
+                else:
+                    print("Opção inválida.")
+        else:
+            print(f"Não foram encontradas informações para o zoneamento: {codigo_zoneamento}")
+    else:
+        print("Zoneamento não encontrado no PDF.")
+
+if __name__ == "__main__":
+    main()
