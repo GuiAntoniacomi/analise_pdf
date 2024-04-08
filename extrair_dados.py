@@ -1,44 +1,35 @@
+from pytesseract import image_to_string
+from PIL import Image
 import re
-from tika import parser
 
-def corrigir_texto_extraido(texto):
-    # Correção específica para a concatenação errada da "Qtde. de Sublotes" e "Área do Terreno"
-    texto_corrigido = re.sub(
-        pattern=r"Qtde\. de Sublotes: 1(\d{3}),00 m²",
-        repl=r"Área do Terreno: \1,00 m²\nQtde. de Sublotes: 1",
-        string=texto
-    )
-    return texto_corrigido
+def extract_info_from_image(image_path):
+    # Open the image file
+    img = Image.open(image_path)
+    # Use pytesseract to do OCR on the image
+    text = image_to_string(img)
 
-def extrair_areas(pdf_text):
-    # Primeiro, aplicar a correção ao texto extraído
-    pdf_text_corrigido = corrigir_texto_extraido(pdf_text)
-    #print("Texto corrigido:")
-    #print(pdf_text_corrigido)
+    # Adjusted regex patterns for more flexibility
+    area_terreno_pattern = r'Área do Terreno:?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*m²'
+    area_construida_pattern = r'Área Total Construída:?\s*(\d{1,3}(?:\.\d{3})*,\d{2})\s*m²'
+    qtde_sublotes_pattern = r'Qtde\.? de Sublotes:?\s*(\d+)'
 
-    # Ajustando as expressões regulares com base no entendimento correto da estrutura do documento
-    padrao_area_terreno = r'Área do\s*Terreno:\s*([\d\.,]+)\s*m²'
-    padrao_area_construida = r'Área Total Construída:\s*([\d\.,]+)\s*m²'
-    
-    # Procura pelos padrões no texto corrigido
-    area_terreno_match = re.search(padrao_area_terreno, pdf_text_corrigido)
-    print("Match para área do terreno:")
-    print(area_terreno_match)
+    # Extracting information using the regex patterns
+    area_terreno_match = re.search(area_terreno_pattern, text)
+    area_construida_match = re.search(area_construida_pattern, text)
+    qtde_sublotes_match = re.search(qtde_sublotes_pattern, text)
 
-    area_construida_match = re.search(padrao_area_construida, pdf_text_corrigido)
-    print("Match para área total construída:")
-    print(area_construida_match)
+    # Parsing the matches to the appropriate data type
+    area_terreno = area_terreno_match.group(1).replace('.', '').replace(',', '.') if area_terreno_match else None
+    area_construida = area_construida_match.group(1).replace('.', '').replace(',', '.') if area_construida_match else None
+    qtde_sublotes = int(qtde_sublotes_match.group(1)) if qtde_sublotes_match else None
 
-    # Extrai e ajusta os dados encontrados para formato numérico
-    area_terreno = float(area_terreno_match.group(1).replace(',', '.')) if area_terreno_match else None
-    area_construida = float(area_construida_match.group(1).replace(',', '.')) if area_construida_match else None
+    return {
+        'Área do Terreno': area_terreno,
+        'Área Total Construída': area_construida,
+        'Quantidade de Sublotes': qtde_sublotes
+    }
 
-    return area_terreno, area_construida
-
-# Exemplo de como você usaria a função
-# Nota: Este bloco precisa ser executado no seu ambiente local, já que depende do arquivo PDF e da biblioteca tika
-pdf_path = "C:\\Users\\anton\\Downloads\\zoneamento\\areas.pdf"
-raw_text = parser.from_file(pdf_path)['content']
-area_terreno, area_construida = extrair_areas(raw_text)
-print(f"Área do Terreno: {area_terreno} m²")
-print(f"Área Total Construída: {area_construida} m²")
+# Usage example - this needs to be run in your local environment
+image_path = "C:\\Users\\anton\\Downloads\\zoneamento\\areas.jpg"  # Replace with the actual path to your image file
+extracted_info = extract_info_from_image(image_path)
+print(extracted_info)
