@@ -1,70 +1,86 @@
+from pdfquery import PDFQuery
 import re
-from PyPDF2 import PdfReader
-import Zoneamento  # Assumindo que este módulo contém as funções necessárias
+from tika import parser
+import tabula
+import xml.etree.ElementTree as ET
 
-def normalizar_codigo_zoneamento(codigo_zoneamento):
-    # Remove o ponto e tudo após ele e converte para minúsculas
-    codigo_zoneamento = re.sub(r'\..*', '', codigo_zoneamento).lower()
-    # Substitui espaços e hífens por nada (remove-os)
-    codigo_zoneamento = re.sub(r'[ -]', '', codigo_zoneamento)
-    return codigo_zoneamento
+def elemento_dentro_da_bbox(element_bbox, target_bbox):
+    """
+    Check if the given element's bbox is within the target bbox.
+    element_bbox: List of [x0, y0, x1, y1] coordinates of the element.
+    target_bbox: List of [x0, y0, x1, y1] coordinates of the target bbox.
+    """
+    x0, y0, x1, y1 = element_bbox
+    target_x0, target_y0, target_x1, target_y1 = target_bbox
 
-def extrair_dados_zoneamento(pdf_path, page_number):
-    reader = PdfReader(pdf_path)
-    page_text = reader.pages[page_number - 1].extract_text()
+    return (x0 >= target_x0 and y0 >= target_y0 and
+            x1 <= target_x1 and y1 <= target_y1)
+
+def definir_bbox_de_busca_por_texto(texto):
+    # Define bbox de busca para ser a bbox do elemento do texto 'esticada' 150px na horizontal
+    elementos = pdf.pq(f'LTTextLineHorizontal:contains("{texto}")')
+    bbox_de_busca = []
+    if elementos:
+        x0 = float(elementos[0].get('x0'))
+        y0 = float(elementos[0].get('y0'))
+        x1 = float(elementos[0].get('x1')) + 150.0
+        y1 = float(elementos[0].get('y1'))
+        
+        bbox_de_busca = [x0, y0, x1, y1]
+    return bbox_de_busca
+
+def definir_valor_por_texto(texto):
+    bbox_de_busca = definir_bbox_de_busca_por_texto(texto)
     
-    padrao_zoneamento = r'Zoneamento:\s*(\w+\.\d+.*?)(?=\n)'
-    zoneamento_match = re.search(padrao_zoneamento, page_text)
+    # PEga todos os elementos da página
+    todos_os_elementos = pdf.pq('LTPage').find('*')
 
-    dados_zoneamento = {}
-    if zoneamento_match:
-        dados_zoneamento['Zoneamento'] = zoneamento_match.group(1)
+    # Separa só os elementos que estão dentro da bbox de busca
+    elementos_na_bbox_de_busca = []
+    for elemento in todos_os_elementos:
+        bbox_desse_elemento = [
+            float(elemento.get('x0')),
+            float(elemento.get('y0')),
+            float(elemento.get('x1')),
+            float(elemento.get('y1'))
+        ]
 
-    return dados_zoneamento
+        # Verifica se o elemento ta dentro da bbox de busca
+        if elemento_dentro_da_bbox(bbox_desse_elemento, bbox_de_busca):
+            elementos_na_bbox_de_busca.append(elemento)
+    
+    if elementos_na_bbox_de_busca:        
+        for elemento in elementos_na_bbox_de_busca:
+            # texto_elemento é algo no formato 111,11 m²
+            texto_elemento = elemento.text.strip()
+            if 'm²' in texto_elemento:
+                # retira o m²
+                numeros_e_virgula = re.findall(r'[\d,]+', texto_elemento)
 
-def buscar_dados_zoneamento(codigo_zoneamento):
-    nome_funcao = f'get_{codigo_zoneamento}_data'
-    if hasattr(Zoneamento, nome_funcao):
-        get_data_func = getattr(Zoneamento, nome_funcao)
-        return get_data_func()
+                # Cria uma string numerica no formato 111,11
+                parte_numerica = ''.join(numeros_e_virgula)
+
+                # Troca , por . pro python poder transformar string em float
+                parte_numerica = float(parte_numerica.replace(',', '.')) 
+
+                break
+        return parte_numerica
     else:
+        print("Elementos não encontrados na bbox de busca")
         return None
 
-def exibir_menu_e_obter_escolha(dados_zoneamento):
-    opcoes = list(dados_zoneamento.keys())
-    print("\nO que você gostaria de consultar?")
-    for i, opcao in enumerate(opcoes, start=1):
-        print(f"{i}. {opcao}")
+if __name__ == '__main__':    
+    print("GOGOGO")
+    pdf_path = 'D:/Projetos/analise_pdf/src/novo.PDF'
+
+    # Initialize PDFQuery and load the PDF file
+    pdf = PDFQuery(pdf_path)
+    pdf.load()
+
+    area_do_terreno = definir_valor_por_texto('Área do Terreno:')    
+    print('Área do Terreno:',area_do_terreno)
+
+    area_total_contruida = definir_valor_por_texto('Área Total Construída:')    
+    print('Área Total Construída:',area_total_contruida)
     
-    escolha = input("Digite o número da opção desejada ou 'sair' para terminar: ").strip().lower()
-    return escolha, opcoes
-
-def exibir_detalhes_zoneamento(escolha, opcoes, dados_zoneamento):
-    if escolha.isdigit():
-        escolha_index = int(escolha) - 1
-        if 0 <= escolha_index < len(opcoes):
-            categoria_escolhida = opcoes[escolha_index]
-            detalhes = dados_zoneamento[categoria_escolhida]
-            print(f"\nDetalhes para {categoria_escolhida}:")
-            for uso, detalhes_uso in detalhes.items():
-                print(f"\n{uso}:")
-                for chave, valor in detalhes_uso.items():
-                    print(f"  {chave}: {valor}")
-        else:
-            print("Opção inválida. Tente novamente.")
-    elif escolha == 'sair':
-        print("Programa encerrado.")
-    else:
-        print("Por favor, insira um número válido.")
-# Caminho do seu arquivo PDF
-pdf_path = "C:\\Users\\anton\\Downloads\\CAM2024084848-240306165204.PDF"
-pagina_desejada = 1  # Ajuste para a página correta
-
-# Supondo que 'dados_zoneamento' seja o dicionário retornado pela sua função de busca
-dados_zoneamento = buscar_dados_zoneamento(codigo_zoneamento)
-
-while True:
-    escolha, opcoes = exibir_menu_e_obter_escolha(dados_zoneamento)
-    if escolha == 'sair':
-        break
-    exibir_detalhes_zoneamento(escolha, opcoes, dados_zoneamento)
+        
