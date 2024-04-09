@@ -1,8 +1,5 @@
 from pdfquery import PDFQuery
 import re
-from tika import parser
-import tabula
-import xml.etree.ElementTree as ET
 
 def elemento_dentro_da_bbox(element_bbox, target_bbox):
     """
