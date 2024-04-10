@@ -1,44 +1,48 @@
-import PyPDF2
 import re
-import webbrowser
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-import time
+from tika import parser
 
-def extract_info(pdf_path):
-    with open(pdf_path, 'rb') as f:
-        reader = PyPDF2.PdfReader(f)
-        text = reader.getPage(0).extractText()
+def normalizar_codigo_zoneamento(codigo):
+    # Remove pontos e converte para minúsculas
+    return re.sub(r'\.', '', codigo).lower()
 
-    # Extrair informações específicas usando expressões regulares
-    area = re.findall(r'Área do Terreno:\s+(\d+)', text)[0]
-    coeficiente = re.findall(r'Coeficiente de Aproveitamento:\s+(\d+)', text)[0]
+def extrair_zoneamento(nome_arquivo):
+    # Faz a extração do texto do PDF
+    raw_text = parser.from_file(nome_arquivo)['content']
+    
+    # Exemplo de padrões de busca
+    padrao_zoneamento = r'Zoneamento:\s*([A-Z]{2,3}\.\d+)'  # Ajuste conforme necessário
+    # Busca pelas informações no texto extraído
+    match_zoneamento = re.search(padrao_zoneamento, raw_text)
+    
+    zoneamento = None
+    if match_zoneamento:
+        zoneamento = normalizar_codigo_zoneamento(match_zoneamento.group(1))
+        
+    return zoneamento
 
-    # Salvar as informações em um dicionário
-    info = {
-        'area': area,
-        'coeficiente': coeficiente,
-    }
+# Nome do arquivo PDF
+nome_arquivo_pdf = "C:\\Users\\anton\\Downloads\\CAM2024084848-240306165204.PDF"
 
-    return info
+# Chama a função para extrair o zoneamento
+zoneamento = extrair_zoneamento(nome_arquivo_pdf)
 
-def main():
-    # Extrair informações da guia amarela
-    info = extract_info("D:\\Users\\eugen\\Documents\\Gui\\ESTUDOS\\Python\\analise_pdf\\src\\CAM2024084848-240306165204.pdf")
+# Agora vamos integrar a extração com o código de busca no banco de dados
+import Zoneamento
 
-    # Abrir o site e preencher o campo
-    webbrowser.open('https://geocuritiba.ippuc.org.br/mapacadastral/')
-    time.sleep(3)  # Espera 3 segundos para garantir que a página seja carregada completamente
+def consultar_zoneamento(zoneamento):
+    # Normaliza o código de zoneamento
+    zona_normalizada = normalizar_codigo_zoneamento(zoneamento)
+    
+    try:
+        # Tenta encontrar os dados usando o código de zoneamento normalizado
+        get_data_func = getattr(Zoneamento, f'get_{zona_normalizada}_data')
+        zoneamento_data = get_data_func()
+        # ... (continuação do código existente para trabalhar com os dados encontrados) ...
+    except AttributeError:
+        print("\nZoneamento não encontrado no banco de dados. Tente novamente.")
 
-    # Simular cliques e digitações com Selenium
-    driver = webdriver.Chrome()  # Abre o navegador Chrome
-    driver.get('https://geocuritiba.ippuc.org.br/mapacadastral/')
-    time.sleep(3)  # Espera 3 segundos para garantir que a página seja carregada completamente
-
-    # Encontra o campo de pesquisa e preenche com a área extraída
-    campo_pesquisa = driver.find_element_by_id('Area')
-    campo_pesquisa.send_keys(info['area'])
-    campo_pesquisa.send_keys(Keys.RETURN)
-
-if __name__ == '__main__':
-    main()
+# Chama a função de consulta com o zoneamento extraído
+if zoneamento:
+    consultar_zoneamento(zoneamento)
+else:
+    print("Não foi possível identificar o zoneamento no PDF.")
