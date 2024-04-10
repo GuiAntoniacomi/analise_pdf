@@ -86,26 +86,23 @@ def pegar_codigo_zoneamento(elementos_encostando_em_bbox_esticada):
     codigo = infos_em_lista[1].split('.')[0]
     return codigo
 
-def buscar_info_por_texto_na_pagina(texto):
-    pdf = PDFQuery(PDF_PATH)
-    pdf.load()    
+def buscar_info_por_texto_na_pagina(texto, pdf_path):
+    pdf = PDFQuery(pdf_path)
+    pdf.load()
     qtde_paginas = len(pdf.pq('LTPage'))
     
     for num_pagina in range(qtde_paginas):
-        # Procura o texto desejado em cada página do pdf
         pdf.load(num_pagina)        
         todos_os_elementos_dessa_pagina = pdf.pq('*')
                 
         bbox_esticada = []
         for elemento in todos_os_elementos_dessa_pagina:
             if elemento.text and texto in elemento.text:
-                # Caso o texto seja encontrado em algum elemento da página, salva a bbox esticada
                 bbox_esticada = definir_bbox_de_busca_por_texto(elemento)
                 break
         
         elementos_encostando_em_bbox_esticada = []
         if bbox_esticada:
-            # Caso alguma bbox_esticada tenha sido salva, procura todos os elementos que encostam na bbox esticada
             for elemento in todos_os_elementos_dessa_pagina:
                 try:
                     bbox_desse_elemento = [
@@ -117,31 +114,32 @@ def buscar_info_por_texto_na_pagina(texto):
                 except:
                     continue
                 if bbox_encostando(bbox_desse_elemento, bbox_esticada) and elemento.text:
-                    elementos_encostando_em_bbox_esticada.append(elemento) 
+                    elementos_encostando_em_bbox_esticada.append(elemento)
         
-        if elementos_encostando_em_bbox_esticada:        
-            # Caso exista algum elemento nessa página encostando na bbox esticada, pega o valor desejado
-            # Cada tipo de busca trata os resultados de maneira diferente
+        if elementos_encostando_em_bbox_esticada:
             if 'Área' in texto:
-                resultado = pegar_valor_numerico_da_area(elementos_encostando_em_bbox_esticada)
+                return pegar_valor_numerico_da_area(elementos_encostando_em_bbox_esticada)
             elif 'Bairro' in texto:
-                resultado = pegar_nome_do_bairro(elementos_encostando_em_bbox_esticada)
+                return pegar_nome_do_bairro(elementos_encostando_em_bbox_esticada)
             elif 'Zoneamento' in texto:
-                resultado = pegar_codigo_zoneamento(elementos_encostando_em_bbox_esticada)
-            
-            return resultado
-        
-        
+                return pegar_codigo_zoneamento(elementos_encostando_em_bbox_esticada)
 
-if __name__ == '__main__':    
-    print("GOGOGO")
-    PDF_PATH = 'D:/Projetos/analise_pdf/src/CAM2024084848-240306165204.PDF'
+    return None  # Retorna None se nenhuma informação for encontrada
 
+
+def extrair_info_completa(pdf_path):
     info_pdf = {
-        'zoneamento': buscar_info_por_texto_na_pagina('Zoneamento:'),
-        'bairro': buscar_info_por_texto_na_pagina('Bairro:'),
-        'area_terreno': buscar_info_por_texto_na_pagina('Área do Terreno:'),
-        'area_construida': buscar_info_por_texto_na_pagina('Área Total Construída:')   
+        'zoneamento': buscar_info_por_texto_na_pagina('Zoneamento:', pdf_path),
+        'bairro': buscar_info_por_texto_na_pagina('Bairro:', pdf_path),
+        'area_terreno': buscar_info_por_texto_na_pagina('Área do Terreno:', pdf_path),
+        'area_construida': buscar_info_por_texto_na_pagina('Área Total Construída:', pdf_path)
     }
+    
+    return info_pdf
 
-    print(info_pdf)
+
+
+if __name__ == '__main__':
+    pdf_path = str(input('Digite o caminho do seu PDF: '))
+    info_extraida = extrair_info_completa(pdf_path)
+    print(info_extraida)
