@@ -64,17 +64,19 @@ def calcular_e_exibir_informacoes_importantes(area_terreno, detalhes_uso):
 
     if coeficiente_aproveitamento and taxa_ocupacao_maxima and altura_basica:
         area_maxima_construcao = area_terreno * coeficiente_aproveitamento
+        print(f"Com base no coeficiente de aproveitamento, você pode construir até {area_maxima_construcao:.2f} m².")
+
         area_por_pavimento = area_terreno * taxa_ocupacao_maxima
         numero_pavimentos_calculados = area_maxima_construcao / area_por_pavimento
-        
-        print(f"Com base no coeficiente de aproveitamento, você pode construir até {area_maxima_construcao:.2f} m².")
-        
-        if numero_pavimentos_calculados > altura_basica:
-            print(f"Calculamos que você pode construir {numero_pavimentos_calculados:.2f} pavimentos, entretanto o zoneamento permite a construção de {altura_basica} pavimentos, então você pode:")
+        print(f"Calculamos que você pode construir {numero_pavimentos_calculados:.2f} pavimentos.")
+
+        if numero_pavimentos_calculados < altura_basica:
             area_por_pavimento_altura_basica = (area_terreno * coeficiente_aproveitamento) / altura_basica
+            print(f"Entretanto, o zoneamento permite a construção de até {altura_basica} pavimentos, então você pode:")
             print(f"1. Dividir sua taxa de ocupação e construir {altura_basica} pavimentos de {area_por_pavimento_altura_basica:.2f} m² cada.")
-            print(f"2. Comprar potencial construtivo e adicionar {altura_basica - numero_pavimentos_calculados:.2f} pavimentos adicionais ao seu projeto.")
-        elif numero_pavimentos_calculados <= altura_basica:
+            potencial_construtivo_adicional = (area_terreno * taxa_ocupacao_maxima) * (altura_basica - numero_pavimentos_calculados)
+            print(f"2. Comprar potencial construtivo e adicionar {potencial_construtivo_adicional:.2f} m² em {altura_basica} pavimentos.")
+        elif numero_pavimentos_calculados >= altura_basica:
             print(f"A quantidade de pavimentos permitida é {altura_basica}, veja a possibilidade de vender potencial construtivo.")
     else:
         if not coeficiente_aproveitamento:
@@ -83,6 +85,8 @@ def calcular_e_exibir_informacoes_importantes(area_terreno, detalhes_uso):
             print("Taxa de ocupação máxima não encontrada.")
         if not altura_basica:
             print("Altura básica não encontrada.")
+
+
 
 
 def main():
