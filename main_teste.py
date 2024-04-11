@@ -58,11 +58,12 @@ def exibir_detalhes_uso(categoria, uso_escolhido, dados_zoneamento):
 def calcular_e_exibir_informacoes_importantes(area_terreno, detalhes_uso):
     print(f"O lote tem {area_terreno} m²")
 
-    coeficiente_aproveitamento = detalhes_uso.get('COEFICIENTE DE APROVEITAMENTO')
-    taxa_ocupacao_maxima = detalhes_uso.get('TAXA DE OCUPAÇÃO MÁXIMA')
-    altura_basica = detalhes_uso.get('ALTURA (pavimentos)')
+    coeficiente_aproveitamento = detalhes_uso.get('COEFICIENTE DE APROVEITAMENTO', 0)
+    taxa_ocupacao_maxima = detalhes_uso.get('TAXA DE OCUPAÇÃO MÁXIMA', 0)
+    altura_basica = detalhes_uso.get('ALTURA (pavimentos)', 0)
+    taxa_permeabilidade_minima = detalhes_uso.get('TAXA DE PERMEABILIDADE MÍNIMA', 0)
 
-    if coeficiente_aproveitamento and taxa_ocupacao_maxima and altura_basica:
+    if coeficiente_aproveitamento and taxa_ocupacao_maxima:
         area_maxima_construcao = area_terreno * coeficiente_aproveitamento
         print(f"Com base no coeficiente de aproveitamento, você pode construir até {area_maxima_construcao:.2f} m².")
 
@@ -70,12 +71,16 @@ def calcular_e_exibir_informacoes_importantes(area_terreno, detalhes_uso):
         numero_pavimentos_calculados = area_maxima_construcao / area_por_pavimento
         print(f"Calculamos que você pode construir {numero_pavimentos_calculados:.2f} pavimentos.")
 
+        if taxa_permeabilidade_minima:
+            area_permeavel_necessaria = area_terreno * taxa_permeabilidade_minima
+            print(f"Lembre-se da área permeável do seu projeto! Pelo menos {area_permeavel_necessaria:.2f} m² precisa ser permeável.")
+
         if numero_pavimentos_calculados < altura_basica:
             area_por_pavimento_altura_basica = (area_terreno * coeficiente_aproveitamento) / altura_basica
             print(f"Entretanto, o zoneamento permite a construção de até {altura_basica} pavimentos, então você pode:")
-            print(f"1. Dividir sua taxa de ocupação e construir {altura_basica} pavimentos de {area_por_pavimento_altura_basica:.2f} m² cada.")
+            print(f"a. Dividir seu coeficiente de aproveitamento e construir {altura_basica} pavimentos de {area_por_pavimento_altura_basica:.2f} m² cada.")
             potencial_construtivo_adicional = (area_terreno * taxa_ocupacao_maxima) * (altura_basica - numero_pavimentos_calculados)
-            print(f"2. Comprar potencial construtivo e adicionar {potencial_construtivo_adicional:.2f} m² em {altura_basica} pavimentos.")
+            print(f"b. Comprar potencial construtivo e adicionar {potencial_construtivo_adicional:.2f} m² em {altura_basica} pavimentos.")
         elif numero_pavimentos_calculados >= altura_basica:
             print(f"A quantidade de pavimentos permitida é {altura_basica}, veja a possibilidade de vender potencial construtivo.")
     else:
@@ -85,7 +90,6 @@ def calcular_e_exibir_informacoes_importantes(area_terreno, detalhes_uso):
             print("Taxa de ocupação máxima não encontrada.")
         if not altura_basica:
             print("Altura básica não encontrada.")
-
 
 
 
